@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./:/var/www
+      - ./_docker/nginx/conf.d/:/etc/nginx/conf.d
+    ports:
+      - "7706:80"
+    depends_on:
+      - app
+  app:
+    build:
+      context: .
+      dockerfile: _docker/app/Dockerfile
+    volumes:
+      - ./:/var/www/
+    depends_on:
+      - db
+    container_name: clhouse_php
+  db:
+    image: mysql:8.0
+    restart: always
+    volumes:
+      - ./tmp/db:/var/lib/mysql
+    environment:
+        MYSQL_DATABASE: clhouse
+        MYSQL_ROOT_PASSWORD: root
+    ports:
+      - 8778:3306
+    command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci
+    container_name: clhouse_db
+  elasticsearch:
+      image: elasticsearch:7.17.0
+      container_name: elasticsearch
+      environment:
+          - discovery.type=single-node
+          - cluster.name=es-docker-cluster
+          - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+      ports:
+          - "127.0.0.1:9200:9200"
+      volumes:
+          - ./storage/elasticsearch:/usr/share/elasticsearch/data
+  clickhouse:
+    image: bitnami/clickhouse:latest
+    environment:
+          - ALLOW_EMPTY_PASSWORD=no
+          - CLICKHOUSE_ADMIN_USER=default
+          - CLICKHOUSE_ADMIN_PASSWORD=default123
+          - CLICKHOUSE_MYSQL_PORT=8778
+    ports:
+          - '8123:8123'
+    volumes:
+        - /path/to/override.xml:/bitnami/clickhouse/etc/conf.d/override.xml:ro
+    container_name: click_house
